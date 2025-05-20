@@ -7,31 +7,36 @@ int main() {
     const int height = 1024;
     const int kernelSize = 5;
 
-    IppiSize roiSize = { width, height };
     Ipp32f sigma = 1.5f;
-    IppiBorderType borderType = ippBorderRepl;
-    IppDataType dataType = ipp32f;
+    IppDataType dataType = ipp8u;
+    IppiSize roiSize = { width, height };
+    IppiBorderType borderType = ippBorderRepl; // Replicate border value for processing
     int numChannels = 1;
-    int specSize = 0, bufferSize = 0;
+    
+    // Allocate memory for source and destination images
+    Ipp8u* pSrc = ippsMalloc_8u(width * height);
+    Ipp8u* pDst = ippsMalloc_8u(width * height);
+    for (int i = 0; i < width * height; ++i) pSrc[i] = rand() % 256;
 
-    // Create Gaussian kernel
-    Ipp32f* pKernel = ippsMalloc_32f(kernelSize * kernelSize);
+    //
+    // Initialize Gaussian filter parameters
+    //
+    // Create Gaussian kernel: Get specs and buffer size of Gaussian filter
+    int specSize = 0, bufferSize = 0; // this is placeholder for specSize and bufferSize
     ippiFilterGaussianGetBufferSize(roiSize, kernelSize, dataType, numChannels, &specSize, &bufferSize);
 
     // Allocate buffer
     IppFilterGaussianSpec* pSpec = (IppFilterGaussianSpec*)ippsMalloc_8u(specSize);
     Ipp8u* pBuffer = ippsMalloc_8u(bufferSize);
-    Ipp8u* pSrc = ippsMalloc_8u(width * height);
-    Ipp8u* pDst = ippsMalloc_8u(width * height);
-    for (int i = 0; i < width * height; ++i) pSrc[i] = rand() % 256;
 
-    // Step 3: Initialize filter
-    IppStatus status = ippiFilterGaussianInit(
-        roiSize, kernelSize, sigma, borderType,
-        dataType, numChannels, pSpec, pBuffer
-    );
+    // Initialize filter
+    IppStatus status = ippiFilterGaussianInit(roiSize, kernelSize, sigma, borderType, dataType, numChannels, pSpec, pBuffer);
     if (status != ippStsNoErr) {
-        printf("Init failed: %d\n", status);
+        std::cout << "Init failed: " << status << std::endl;
+        ippsFree(pSrc);
+        ippsFree(pDst);
+        ippsFree(pSpec);
+        ippsFree(pBuffer);
         return -1;
     }
 
@@ -51,9 +56,7 @@ int main() {
     ippsFree(pSrc);
     ippsFree(pDst);
     ippsFree(pSpec);
-    ippsFree(pKernel);
     ippsFree(pBuffer);
 
     return 0;
 }
-
